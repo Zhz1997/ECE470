@@ -14,5 +14,5 @@ class Course:
     def getDuration(self):
         return self.duration
 
-    def getTimePref(self):
+    def getTimePref(self,id):
         return self.timePref
