@@ -1,5 +1,7 @@
 import sys,os
 import random
+import numpy as np
+from chromosome import Chromosome
 from classRoom import ClassRoom
 from course import Course
 from timeSlot import TimeSlot
@@ -19,14 +21,18 @@ def debug1():
     print("timeSlots:")
     for i in range(0,len(timeSlots)):
         print("id: "+timeSlots[i].getId()+" "+"date: "+timeSlots[i].getDate()+" startTime: "+timeSlots[i].getStartTime())
-
 def printGene(gene):
     print("gene: courseID = " + str(gene.courseID)
     + " roomID = " + str(gene.roomID)
     + " date = " + str(gene.date)
     + " tsID = " + str(gene.tsID))
+def printChrom(chrom):
+    print("chromosom: ID = " + str(chrom.id)
+    + " fitness = " + str(chrom.fitness)
+    + " scv = " + str(chrom.scv)
+    + " hcv = " + str(chrom.hcv))
 
-
+#------------------------------------
 def getRooms(rooms,roomsFile):
     lines = [line.rstrip('\n') for line in roomsFile]
 
@@ -55,8 +61,8 @@ def getTimeSlots(timeSlots,timeSlotFile):
     return timeSlots
 
 def createFirstGen(firstGen,rooms,courses,timeSlots):
-    for i in range (0,1):
-        chrom = []
+    for i in range (0,10):
+        genes = []
         for c in courses:
             roomID = random.randint(1,len(rooms))
             dates = [1,2,3,4,5]
@@ -68,7 +74,7 @@ def createFirstGen(firstGen,rooms,courses,timeSlots):
                 courseDates.append(dates[1])
                 courseDates.append(dates[2])
 
-                ts_ini = random.randint(1,50)
+                ts_ini = random.randint(1,10)
                 if(ts_ini % 2 == 0):
                     ts.append(ts_ini-1)
                     ts.append(ts_ini)
@@ -81,12 +87,12 @@ def createFirstGen(firstGen,rooms,courses,timeSlots):
                 courseDates.append(dates[0])
                 courseDates.append(dates[1])
 
-                ts_ini = random.randint(1,50)
+                ts_ini = random.randint(1,10)
                 if(ts_ini == 1):
                     ts.append(ts_ini)
                     ts.append(ts_ini+1)
                     ts.append(ts_ini+2)
-                elif(ts_ini == 50):
+                elif(ts_ini == 10):
                     ts.append(ts_ini-2)
                     ts.append(ts_ini-1)
                     ts.append(ts_ini)
@@ -96,39 +102,57 @@ def createFirstGen(firstGen,rooms,courses,timeSlots):
                     ts.append(ts_ini+1)
 
             curGene = Gene(c.id,roomID,courseDates,ts)
-            chrom.append(curGene)
-            printGene(curGene)
+            genes.append(curGene)
+            #printGene(curGene)
+        chrom = Chromosome(i+1,genes,float('inf'),0,0)
         firstGen.append(chrom)
 
-def computeFitness(generation,courses,rooms):
-    for chorom in generation:
-        scv = 0
-        hcv = 0
-        for i in range(0,len(chorom)):
-            #check timePref
+def computeFitness(chrom,courses,rooms):
+    #define the 3d array for checking time conflict(days,rooms,ts)
+    checkTF = np.empty((5,3,10),dtype = object)
+
+    timeConflict = 0
+    roomCapVio = 0
+    timePrefVio = 0
+
+    scv = 0
+    hcv = 0
+    for i in range(0,len(chrom.genes)):
+        #check timePref
+        actualTime = 0
+        if(chrom.genes[i].tsID[0] <= 5):
             actualTime = 0
-            if(chorom[i].tsID[0] <= 12):
-                actualTIme = 0
-            elif(chorom[i].tsID[0] > 12):
-                actualTIme = 1
-            if(int(courses[i].timePref) != int(actualTIme)):
-                scv = scv + 1
+        elif(chrom.genes[i].tsID[0] > 5):
+            actualTime = 1
+        if(int(courses[i].timePref) != int(actualTime)):
+            timePrefVio = timePrefVio + 1
 
-            #check roomCap
-            requiredRoomCap = int(courses[i].capLevel)
-            actualRoomCap = int(rooms[chorom[i].roomID-1].capLevel)
-            if(requiredRoomCap>actualRoomCap):
-                print("yes")
-                hcv = hcv + 1
+        #check roomCap
+        requiredRoomCap = int(courses[i].capLevel)
+        actualRoomCap = int(rooms[chrom.genes[i].roomID-1].capLevel)
+        if(requiredRoomCap>actualRoomCap):
+            roomCapVio = roomCapVio + 1
 
-            print("required: " + str(requiredRoomCap))
-            print("actual: " + str(actualRoomCap))
+        #check time conflict
+        for date in chrom.genes[i].date:
+            for tsID in chrom.genes[i].tsID:
+                if(checkTF[date-1][chrom.genes[i].roomID-1][tsID-1] != None):
+                    timeConflict = timeConflict + 1
+                    checkTF[date-1][chrom.genes[i].roomID-1][tsID-1].append(chrom.genes[i].courseID)
 
-            #check time conflict
+                else:
+                    temL = []
+                    temL.append(chrom.genes[i].courseID)
+                    checkTF[date-1][chrom.genes[i].roomID-1][tsID-1] = temL
+
+    hcv = roomCapVio + timeConflict
+    scv = timePrefVio
+    fitness = hcv*21+scv
+    chrom.fitness = fitness
+    chrom.scv = scv
+    chrom.hcv = hcv
 
 
-        print(scv)
-        print(hcv)
 
 
 def main():
@@ -157,8 +181,15 @@ def main():
     firstGen = []
     createFirstGen(firstGen,rooms,courses,timeSlots)
 
-    #calculate fitness values
-    computeFitness(firstGen,courses,rooms)
+    #calculate fitness values of chroms in first generation
+    for chrom in firstGen:
+        computeFitness(chrom,courses,rooms)
+    #computeFitness(firstGen[0],courses,rooms)
+    for chrom in firstGen:
+        printChrom(chrom)
+
+    nextGen = []
+    
 
 
 
