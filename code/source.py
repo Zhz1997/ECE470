@@ -3,11 +3,11 @@ import random
 import numpy as np
 import copy as copy
 import math
-from chromosome import Chromosome
-from classRoom import ClassRoom
-from course import Course
-from timeSlot import TimeSlot
-from gene import Gene
+from _chromosome import Chromosome
+from _classRoom import ClassRoom
+from _course import Course
+from _timeSlot import TimeSlot
+from _gene import Gene
 
 #print helper functions
 #---------------------------------
@@ -83,7 +83,6 @@ def createFirstGen(firstGen):
         createChrom(chrom,i+1)
         firstGen.append(chrom)
 
-
 def computeFitness(chrom,out):
     scv = 0
     hcv = 0
@@ -137,7 +136,6 @@ def computeFitness(chrom,out):
 
         print(tsConflictArray)
 
-
 def createNextGen(prevGen):
     nextGen = []
     #copy the best chrom from prevGen to nextGen
@@ -167,6 +165,7 @@ def createNextGen(prevGen):
         #do crossOver
         newChrom = crossOver(parent1,parent2,i+2)
 
+        #do evolve
         evolve(newChrom)
 
         #mutate
@@ -208,39 +207,71 @@ def evolve(chrom):
     #evolve DurationPref
     else:
         firstDPV = gene(0,0,0,0)
-        secondDPV = gene(0,0,0,0)
-        firstDPVFound = 0
         firstDPVIndex = 0
-        secondDPVFound = 0
-        secondDPVIndex = 0
-        geneIndex = 0
-        while(fistDPVFound != 1 or secondDPVFound != 1):
-            if(fistDPVFound == 0):
+        secondDPV = gene(0,0,0,0)
+        geneDPVList = []
+        #loop through chrom to find all genes that has durationPrefVio
+        index = 0
+        for gene in chrom.genes:
+            if(gene.durationPref != timeSlots[int(gene.tsID)-1]):
+                geneDPVList.append([gene,index])
+            index = index+1
+
+        dpv1 = pickOne(geneDPVList)
+        firstDPV = dpv1[0]
+        firstDPVIndex = dpv[1]
+
+        geneDPVList.remove(firstDPV)
+
+        dpv2 = pickOne(geneDPVList)
+        secondDPV = dpv2[0]
+        secondDPVIndex = dpv[1]
+
+        #store secondDPV in a temp value
+        tempGene = copy.deepcopy(secondDPV)
+        #tempIndex = copy.deepcopy(secondDPVIndex)
+
+        chrom.genes[secondDPVIndex] = copy.deepcopy(firstDPV)
+        chrom.genes[firstDPVIndex] = tempGene
+
+
+
+        #-------------------------------------
+        #firstDPV = gene(0,0,0,0)
+        #secondDPV = gene(0,0,0,0)
+        #firstDPVFound = 0
+        #firstDPVIndex = 0
+        #secondDPVFound = 0
+        #secondDPVIndex = 0
+        #geneIndex = 0
+        #while(fistDPVFound != 1 or secondDPVFound != 1):
+            #if(fistDPVFound == 0):
                 #find the fist duration prefer violation
-                if(chrom.genes[geneIndex].durationPref != timeSlots[int(chrom.genes[geneIndex].tsID)-1]):
-                    firstDPV = chrom.genes[geneIndex]
-                    firstDPVFound = 1
-                    firstDPVIndex = geneIndex
-            else:
+            #    if(chrom.genes[geneIndex].durationPref != timeSlots[int(chrom.genes[geneIndex].tsID)-1]):
+            #        firstDPV = chrom.genes[geneIndex]
+            #        firstDPVFound = 1
+            #        firstDPVIndex = geneIndex
+            #else:
                 #find the second duration prefer violation
-                if(chrom.genes[geneIndex].durationPref != timeSlots[int(chrom.genes[geneIndex].tsID)-1]):
-                    secondDPV = chrom.genes[geneIndex]
-                    secondDPVFound = 1
-                    secondDPVIndex = geneIndex
+            #    if(chrom.genes[geneIndex].durationPref != timeSlots[int(chrom.genes[geneIndex].tsID)-1]):
+            #        secondDPV = chrom.genes[geneIndex]
+            #        secondDPVFound = 1
+            #        secondDPVIndex = geneIndex
 
 
             #increase geneIndex
-            geneIndex = geneIndex + 1
+            #geneIndex = geneIndex + 1
             #reset index
-            if(geneIndex == len(chrom.genes)):
-                geneIndex = 0
+            #if(geneIndex == len(chrom.genes)):
+                #geneIndex = 0
 
-        if(firstDPVIndex == secondDPVIndex):
-            return
+        #if(firstDPVIndex == secondDPVIndex):
+            #return
         #swap first DPV and second DPV
-        tempGene = copy.deepcopy(secondDPV)
-        secondDPV = copy.deepcopy(firstDPV)
-        firstDPV = copy.deepcopy(tempGene)
+        #tempGene = copy.deepcopy(secondDPV)
+        #secondDPV = copy.deepcopy(firstDPV)
+        #firstDPV = copy.deepcopy(tempGene)
+        #----------------------------------------------------------
 
 
 
@@ -248,6 +279,7 @@ def evolve(chrom):
 def main():
     #generate first generation
     firstGen = []
+    emptyTS = []
     createFirstGen(firstGen)
     printGeneration(firstGen)
 
